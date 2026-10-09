@@ -4,69 +4,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Security Verification</title>
+  <title>Cybersecurity Investigation Demo</title>
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: #0b1020; color: #f8fafc;
-      font-family: Arial, sans-serif;
+      background: #080d19; color: #e8eefc;
+      font: 15px Arial, sans-serif;
     }
-    .card {
-      width: min(90%, 400px); padding: 32px 24px; text-align: center;
-      background: #151c30; border: 1px solid #303b55; border-radius: 18px;
+    main {
+      width: min(92%, 480px); padding: 28px;
+      background: #111a2b; border: 1px solid #293953;
+      border-radius: 18px; box-shadow: 0 20px 60px #0005;
     }
+    .tag { color: #67e8b5; font-size: 12px; letter-spacing: 2px; }
+    h1 { font-size: 24px; }
+    p { color: #aab8d0; line-height: 1.6; }
     .spinner {
-      width: 48px; height: 48px; margin: 0 auto 22px;
-      border: 4px solid #334155; border-top-color: #60a5fa;
+      width: 42px; height: 42px; margin: 24px 0;
+      border: 4px solid #293953; border-top-color: #60a5fa;
       border-radius: 50%; animation: spin .8s linear infinite;
     }
-    .track { height: 6px; margin-top: 24px; background: #303b55; border-radius: 9px; overflow: hidden; }
-    .progress { height: 100%; width: 0; background: #60a5fa; animation: load 5s linear forwards; }
-    p { color: #cbd5e1; line-height: 1.5; }
-    small { color: #94a3b8; }
+    .track { height: 5px; background: #293953; border-radius: 8px; overflow: hidden; }
+    .bar { width: 0; height: 100%; background: #60a5fa; animation: load 5s linear forwards; }
+    #status { color: #67e8b5; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes load { to { width: 100%; } }
   </style>
 </head>
 <body>
-  <main class="card">
-    <div class="spinner"></div>
-    <h2>Security Check</h2>
-    <p id="status">Please wait while we process your visit...</p>
-    <div class="track"><div class="progress"></div></div>
-    <p><small>
-      Cybersecurity demo: visit time, browser information, timezone
-      and network IP are recorded for security investigation.
-    </small></p>
-  </main>
+<main>
+  <div class="tag">SECURITY LAB / DEMONSTRATION</div>
+  <h1>Visit Telemetry</h1>
+  <p>
+    This demonstration records basic browser and connection metadata
+    for a cybersecurity investigation exercise. It does not access
+    your camera, microphone, files or passwords.
+  </p>
+  <div class="spinner"></div>
+  <p id="status">Recording permitted technical metadata…</p>
+  <div class="track"><div class="bar"></div></div>
+  <p id="event" style="font-size:12px"></p>
+</main>
 
-  <script>
-    async function reportVisit() {
+<script>
+  const eventId = crypto.randomUUID();
+
+  const report = {
+    eventId,
+    eventType: "page_visit",
+    clientTimestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    languages: navigator.languages,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    platform: navigator.platform,
+    screen: {
+      width: screen.width,
+      height: screen.height,
+      colorDepth: screen.colorDepth,
+      pixelRatio: devicePixelRatio
+    },
+    viewport: {
+      width: innerWidth,
+      height: innerHeight
+    },
+    capabilities: {
+      cookiesEnabled: navigator.cookieEnabled,
+      online: navigator.onLine,
+      touchPoints: navigator.maxTouchPoints
+    },
+    referrerOrigin: (() => {
       try {
-        await fetch("/api/visit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userAgent: navigator.userAgent,
-            language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            screen: `${screen.width}x${screen.height}`,
-            platform: navigator.platform
-          })
-        });
-      } catch (error) {
-        console.error("Report failed:", error);
+        return document.referrer
+          ? new URL(document.referrer).origin
+          : "Direct visit";
+      } catch {
+        return "Unavailable";
       }
-    }
+    })(),
+    pagePath: location.pathname
+  };
 
-    reportVisit();
+  document.getElementById("event").textContent =
+    "Event ID: " + eventId;
 
-    setTimeout(() => {
+  async function sendReport() {
+    try {
+      const response = await fetch("/api/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(report)
+      });
+
       document.getElementById("status").textContent =
-        "Check complete. Redirecting...";
-      window.location.replace("https://www.google.com/");
-    }, 5000);
-  </script>
+        response.ok ? "Report submitted." : "Report submission failed.";
+    } catch {
+      document.getElementById("status").textContent =
+        "Unable to reach the reporting endpoint.";
+    }
+  }
+
+  sendReport();
+
+  setTimeout(() => {
+    document.getElementById("status").textContent =
+      "Demonstration complete.";
+    window.location.replace("https://www.google.com/");
+  }, 5000);
+</script>
 </body>
 </html>
