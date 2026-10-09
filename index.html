@@ -4,114 +4,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cybersecurity Investigation Demo</title>
+  <title>Please wait</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: #080d19; color: #e8eefc;
-      font: 15px Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      color: #202124;
+      font: 14px Arial, sans-serif;
     }
-    main {
-      width: min(92%, 480px); padding: 28px;
-      background: #111a2b; border: 1px solid #293953;
-      border-radius: 18px; box-shadow: 0 20px 60px #0005;
+
+    .loader {
+      width: min(320px, 85vw);
+      text-align: center;
     }
-    .tag { color: #67e8b5; font-size: 12px; letter-spacing: 2px; }
-    h1 { font-size: 24px; }
-    p { color: #aab8d0; line-height: 1.6; }
+
     .spinner {
-      width: 42px; height: 42px; margin: 24px 0;
-      border: 4px solid #293953; border-top-color: #60a5fa;
-      border-radius: 50%; animation: spin .8s linear infinite;
+      width: 34px;
+      height: 34px;
+      margin: 0 auto 22px;
+      border: 3px solid #e8eaed;
+      border-top-color: #4285f4;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
     }
-    .track { height: 5px; background: #293953; border-radius: 8px; overflow: hidden; }
-    .bar { width: 0; height: 100%; background: #60a5fa; animation: load 5s linear forwards; }
-    #status { color: #67e8b5; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes load { to { width: 100%; } }
+
+    .bar {
+      height: 3px;
+      width: 100%;
+      margin-top: 22px;
+      overflow: hidden;
+      background: #e8eaed;
+    }
+
+    .bar::after {
+      content: "";
+      display: block;
+      width: 35%;
+      height: 100%;
+      background: #4285f4;
+      animation: move 1s ease-in-out infinite alternate;
+    }
+
+    #status { color: #5f6368; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes move {
+      from { transform: translateX(0); }
+      to { transform: translateX(185%); }
+    }
   </style>
 </head>
 <body>
-<main>
-  <div class="tag">SECURITY LAB / DEMONSTRATION</div>
-  <h1>Visit Telemetry</h1>
-  <p>
-    This demonstration records basic browser and connection metadata
-    for a cybersecurity investigation exercise. It does not access
-    your camera, microphone, files or passwords.
-  </p>
-  <div class="spinner"></div>
-  <p id="status">Recording permitted technical metadata…</p>
-  <div class="track"><div class="bar"></div></div>
-  <p id="event" style="font-size:12px"></p>
-</main>
+  <main class="loader">
+    <div class="spinner"></div>
+    <p id="status">Please wait...</p>
+    <div class="bar"></div>
+  </main>
 
-<script>
-  const eventId = crypto.randomUUID();
+  <script>
+    const report = {
+      eventId: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      screen: `${screen.width}x${screen.height}`,
+      viewport: `${innerWidth}x${innerHeight}`,
+      platform: navigator.platform
+    };
 
-  const report = {
-    eventId,
-    eventType: "page_visit",
-    clientTimestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    language: navigator.language,
-    languages: navigator.languages,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    platform: navigator.platform,
-    screen: {
-      width: screen.width,
-      height: screen.height,
-      colorDepth: screen.colorDepth,
-      pixelRatio: devicePixelRatio
-    },
-    viewport: {
-      width: innerWidth,
-      height: innerHeight
-    },
-    capabilities: {
-      cookiesEnabled: navigator.cookieEnabled,
-      online: navigator.onLine,
-      touchPoints: navigator.maxTouchPoints
-    },
-    referrerOrigin: (() => {
-      try {
-        return document.referrer
-          ? new URL(document.referrer).origin
-          : "Direct visit";
-      } catch {
-        return "Unavailable";
-      }
-    })(),
-    pagePath: location.pathname
-  };
+    // Start the report immediately; never wait for it before the timer.
+    const reportRequest = fetch("/api/visit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(report),
+      keepalive: true
+    }).catch(() => null);
 
-  document.getElementById("event").textContent =
-    "Event ID: " + eventId;
-
-  async function sendReport() {
-    try {
-      const response = await fetch("/api/visit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(report)
-      });
-
-      document.getElementById("status").textContent =
-        response.ok ? "Report submitted." : "Report submission failed.";
-    } catch {
-      document.getElementById("status").textContent =
-        "Unable to reach the reporting endpoint.";
-    }
-  }
-
-  sendReport();
-
-  setTimeout(() => {
-    document.getElementById("status").textContent =
-      "Demonstration complete.";
-    window.location.replace("https://www.google.com/");
-  }, 5000);
-</script>
+    // Simple loading screen with a maximum 5-second display.
+    setTimeout(() => {
+      window.location.replace("https://www.google.com/");
+    }, 5000);
+  </script>
 </body>
 </html>
